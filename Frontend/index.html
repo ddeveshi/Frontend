@@ -47,6 +47,15 @@
           <i class="fa fa-arrow-left"></i>Return to Lessons
         </button>
         <p v-if="cartItemCount === 0">Your cart is empty.</p>
+        <!-- Shopping cart Lessons -->
+        <div v-for="lesson in cartLessons" :key="lesson.id">
+          <h2>{{lesson.subject}}</h2>
+          <img :src="imageUrl(lesson)" :alt="lesson.subject" width="200" />
+          <p>Price: Rs {{lesson.price}}</p>
+          <p>Quantity: {{cartLessonCount(lesson.id)}}</p>
+          <p>Total: Rs {{lesson.price * cartLessonCount(lesson.id)}}</p>
+          <button @click="removeItem(lesson)">Remove one</button>
+        </div>
       </div>
     </div>
 
@@ -68,6 +77,11 @@
         computed: {
           cartItemCount() {
             return this.cart.length;
+          },
+          cartLessons() {
+            return this.lessons.filter(
+              (lesson) => this.cartLessonCount(lesson.id) > 0,
+            );
           },
         },
         methods: {
