@@ -14,7 +14,7 @@
     <div id="tuitions">
       <div v-if="showLesson">
         <h1>{{message}}</h1>
-        <button @click="toggleCheckout">
+        <button @click="toggleCheckout" :disabled="cartItemCount === 0">
           <i class="fa fa-shopping-cart"></i>Checkout ({{cartItemCount}})
         </button>
         <!-- Lessons Info -->
