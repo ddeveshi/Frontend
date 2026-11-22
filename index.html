@@ -17,8 +17,23 @@
         <button @click="toggleCheckout" :disabled="cartItemCount === 0">
           <i class="fa fa-shopping-cart"></i>Checkout ({{cartItemCount}})
         </button>
+        <div>
+          <label for="sortBy">Sort lessons by:</label>
+          <select id="sortBy" v-model="sortBy">
+            <option value="subject">Subject</option>
+            <option value="location">Location</option>
+            <option value="price">Price</option>
+            <option value="spaces">Spaces available</option>
+          </select>
+
+          <label for="sortOrder">Order:</label>
+          <select id="sortOrder" v-model="sortOrder">
+            <option value="ascending">Ascending</option>
+            <option value="descending">Descending</option>
+          </select>
+        </div>
         <!-- Lessons Info -->
-        <div v-for="lesson in lessons" :key="lesson.id">
+        <div v-for="lesson in sortedLessons" :key="lesson.id">
           <img :src="imageUrl(lesson)" :alt="lesson.subject" width="200" />
           <h2>{{lesson.subject}}</h2>
           <p>Subject: {{lesson.subject}}</p>
@@ -69,6 +84,8 @@
             showLesson: true,
             lessons: [],
             cart: [],
+            sortBy: "subject", // Default (Initialise) sort by subject
+            sortOrder: "ascending",
           };
         },
         created() {
@@ -82,6 +99,29 @@
             return this.lessons.filter(
               (lesson) => this.cartLessonCount(lesson.id) > 0,
             );
+          },
+          sortedLessons() {
+            // Sort a copy so the original lessons list stays unchanged.
+            const sorted = [...this.lessons];
+            sorted.sort(
+              (
+                first,
+                second, // first and second are the two lessons being compared
+              ) => {
+                let result;
+                if (this.sortBy === "price" || this.sortBy === "spaces") {
+                  result = first[this.sortBy] - second[this.sortBy];
+                } else {
+                  // For subject and location, we use localeCompare for string comparison
+                  result = first[this.sortBy].localeCompare(
+                    second[this.sortBy],
+                  );
+                }
+
+                return this.sortOrder === "ascending" ? result : -result;
+              },
+            );
+            return sorted;
           },
         },
         methods: {
