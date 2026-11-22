@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <title>Tuitions</title>
+  </head>
+  <body>
+    <div id="tuitions">
+      <div v-if="showLesson">
+        <h1>{{message}}</h1>
+        <button @click="toggleCheckout" :disabled="cartItemCount === 0">
+          <i class="fa fa-shopping-cart"></i>Checkout ({{cartItemCount}})
+        </button>
+        <!-- Lessons Info -->
+        <div v-for="lesson in lessons" :key="lesson.id">
+          <img :src="imageUrl(lesson)" :alt="lesson.subject" width="200" />
+          <h2>{{lesson.subject}}</h2>
+          <p>Subject: {{lesson.subject}}</p>
+          <p>Location: {{lesson.location}}</p>
+          <p>Price: Rs {{lesson.price}}</p>
+          <p>Spaces Available: {{lesson.spaces}}</p>
+          <p>Teacher: {{lesson.teacher_fn}} {{lesson.teacher_ln}}</p>
+          <p>{{cartLessonCount(lesson.id)}} in cart</p>
+          <button
+            v-on:click="addItem(lesson)"
+            :disabled="!canAddToCart(lesson)"
+          >
+            Add to Cart
+          </button>
+          <button
+            v-on:click="removeItem(lesson)"
+            :disabled="cartLessonCount(lesson.id) === 0"
+          >
+            Remove from Cart
+          </button>
+        </div>
+      </div>
+      <div v-else>
+        <h1>Check Out Page</h1>
+        <button @click="toggleCheckout">
+          <i class="fa fa-arrow-left"></i>Return to Lessons
+        </button>
+        <p v-if="cartItemCount === 0">Your cart is empty.</p>
+        <!-- Shopping cart Lessons -->
+        <div v-for="lesson in cartLessons" :key="lesson.id">
+          <h2>{{lesson.subject}}</h2>
+          <img :src="imageUrl(lesson)" :alt="lesson.subject" width="200" />
+          <p>Price: Rs {{lesson.price}}</p>
+          <p>Quantity: {{cartLessonCount(lesson.id)}}</p>
+          <p>Total: Rs {{lesson.price * cartLessonCount(lesson.id)}}</p>
+          <button @click="removeItem(lesson)">Remove one</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const TUITIONS_URL = "http://localhost:3000";
+      const { createApp } = Vue;
+      const myApp = Vue.createApp({
+        data() {
+          return {
+            message: "Hello. Welcome to extra-curricular tuitions!",
+            showLesson: true,
+            lessons: [],
+            cart: [],
+          };
+        },
+        created() {
+          this.fetchData();
+        },
+        computed: {
+          cartItemCount() {
+            return this.cart.length;
+          },
+          cartLessons() {
+            return this.lessons.filter(
+              (lesson) => this.cartLessonCount(lesson.id) > 0,
+            );
+          },
+        },
+        methods: {
+          imageUrl(lesson) {
+            return TUITIONS_URL + lesson.image;
+          },
+          toggleCheckout() {
+            this.showLesson = !this.showLesson;
+          },
+          addItem(lesson) {
+            if (lesson.spaces > 0) {
+              this.cart.push(lesson.id);
+              lesson.spaces--;
+            }
+          },
+          removeItem(lesson) {
+            if (this.cartLessonCount(lesson.id) > 0) {
+              this.cart.splice(this.cart.indexOf(lesson.id), 1);
+              lesson.spaces++;
+            }
+          },
+          cartLessonCount(id) {
+            let count = 0;
+            for (let i = 0; i < this.cart.length; i++) {
+              if (this.cart[i] === id) {
+                count++;
+              }
+            }
+            return count;
+          },
+          canAddToCart(lesson) {
+            return lesson.spaces > 0;
+          },
+          async fetchData() {
+            try {
+              const url = TUITIONS_URL + "/collections/lessons";
+              let response = await fetch(url);
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              this.lessons = await response.json();
+              console.log(this.lessons);
+            } catch (error) {
+              console.error("Error fetching data:", error);
+            }
+          },
+        },
+      });
+      myApp.mount("#tuitions");
+    </script>
+  </body>
+</html>
