@@ -94,13 +94,8 @@
               orderSubmitted
             "
           >
-            {{
-              isSubmitting
-                ? "Submitting..."
-                : orderSubmitted
-                  ? "Order submitted"
-                  : "Checkout (Rs " + cartTotal + ")"
-            }}
+            {{ isSubmitting ? "Submitting..." : orderSubmitted ? "Order
+            submitted" : "Checkout (Rs " + cartTotal + ")" }}
           </button>
           <p v-if="orderError">{{orderError}}</p>
           <p v-if="orderSubmitted">
@@ -204,19 +199,16 @@
                 lessonID: lesson.id,
                 spaces: this.cartLessonCount(lesson.id),
               }));
-              const response = await fetch(
-                TUITIONS_URL + "/collections/orders",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    name: this.customerName.trim(),
-                    phone: this.customerPhone.trim(),
-                    lessonIDs: cartItems.map((item) => item.lessonID),
-                    spaces: cartItems.map((item) => item.spaces),
-                  }),
-                },
-              );
+              const response = await fetch(TUITIONS_URL + "/orders", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: this.customerName.trim(),
+                  phone: this.customerPhone.trim(),
+                  lessonIDs: cartItems.map((item) => item.lessonID),
+                  spaces: cartItems.map((item) => item.spaces),
+                }),
+              });
               const result = await response.json();
               if (!response.ok) {
                 throw new Error(
@@ -234,18 +226,16 @@
             }
           },
           addItem(lesson) {
-            if (lesson.spaces > 0) {
+            if (this.canAddToCart(lesson)) {
               this.orderSubmitted = false;
               this.orderError = "";
               this.cart.push(lesson.id);
-              lesson.spaces--;
             }
           },
           removeItem(lesson) {
             if (this.cartLessonCount(lesson.id) > 0) {
               this.orderError = "";
               this.cart.splice(this.cart.indexOf(lesson.id), 1);
-              lesson.spaces++;
             }
           },
           cartLessonCount(id) {
@@ -258,11 +248,11 @@
             return count;
           },
           canAddToCart(lesson) {
-            return lesson.spaces > 0;
+            return this.cartLessonCount(lesson.id) < lesson.spaces;
           },
           async fetchData() {
             try {
-              const url = TUITIONS_URL + "/collections/lessons";
+              const url = TUITIONS_URL + "/lessons";
               let response = await fetch(url);
               if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
