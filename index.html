@@ -14,7 +14,7 @@
     <div id="tuitions">
       <div v-if="showLesson">
         <h1>{{message}}</h1>
-        <button @click="viewCart" :disabled="cartItemCount === 0">
+        <button v-on:click="viewCart" :disabled="cartItemCount === 0">
           <i class="fa fa-shopping-cart"></i>View Cart ({{cartItemCount}})
         </button>
         <div>
@@ -58,7 +58,7 @@
       </div>
       <div v-else>
         <h1>Check Out Page</h1>
-        <button @click="viewCart">
+        <button v-on:click="viewCart">
           <i class="fa fa-arrow-left"></i>Return to Lessons
         </button>
         <p v-if="cartItemCount === 0">Your cart is empty.</p>
@@ -69,7 +69,7 @@
           <p>Unit Price: Rs {{lesson.price}}</p>
           <p>Quantity: {{cartLessonCount(lesson.id)}}</p>
           <p>Total: Rs {{lesson.price * cartLessonCount(lesson.id)}}</p>
-          <button @click="removeItem(lesson)">Remove one</button>
+          <button v-on:click="removeItem(lesson)">Remove one</button>
         </div>
         <div>
           <label for="customerName">Name:</label>
@@ -81,15 +81,28 @@
           <label for="customerPhone">Phone:</label>
           <input id="customerPhone" v-model="customerPhone" type="text" />
           <p v-if="customerPhone && !isPhoneValid">
-            Phone must be 8 digits long and start with 5.
+            Phone must contain numbers only.
           </p>
 
           <button
-            @click="submitOrder"
-            :disabled="!isNameValid || !isPhoneValid"
+            v-on:click="submitOrder"
+            :disabled="
+              !isNameValid ||
+              !isPhoneValid ||
+              cartItemCount === 0 ||
+              isSubmitting ||
+              orderSubmitted
+            "
           >
-            Checkout (Rs {{cartTotal}})
+            {{
+              isSubmitting
+                ? "Submitting..."
+                : orderSubmitted
+                  ? "Order submitted"
+                  : "Checkout (Rs " + cartTotal + ")"
+            }}
           </button>
+          <p v-if="orderError">{{orderError}}</p>
           <p v-if="orderSubmitted">
             Thank you, {{customerName}}. Your order has been submitted.
           </p>
@@ -112,6 +125,8 @@
             customerName: "",
             customerPhone: "",
             orderSubmitted: false,
+            isSubmitting: false,
+            orderError: "",
           };
         },
         created() {
@@ -171,19 +186,64 @@
           viewCart() {
             this.showLesson = !this.showLesson;
           },
-          submitOrder() {
-            if (this.isNameValid && this.isPhoneValid) {
+          async submitOrder() {
+            if (
+              !this.isNameValid ||
+              !this.isPhoneValid ||
+              this.cartItemCount === 0 ||
+              this.isSubmitting ||
+              this.orderSubmitted
+            ) {
+              return;
+            }
+
+            this.isSubmitting = true;
+            this.orderError = "";
+            try {
+              const cartItems = this.cartLessons.map((lesson) => ({
+                lessonID: lesson.id,
+                spaces: this.cartLessonCount(lesson.id),
+              }));
+              const response = await fetch(
+                TUITIONS_URL + "/collections/orders",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    name: this.customerName.trim(),
+                    phone: this.customerPhone.trim(),
+                    lessonIDs: cartItems.map((item) => item.lessonID),
+                    spaces: cartItems.map((item) => item.spaces),
+                  }),
+                },
+              );
+              const result = await response.json();
+              if (!response.ok) {
+                throw new Error(
+                  result.error || `HTTP error! status: ${response.status}`,
+                );
+              }
+
               this.orderSubmitted = true;
+              this.cart = [];
+            } catch (error) {
+              this.orderError = error.message;
+              console.error("Error submitting order:", error);
+            } finally {
+              this.isSubmitting = false;
             }
           },
           addItem(lesson) {
             if (lesson.spaces > 0) {
+              this.orderSubmitted = false;
+              this.orderError = "";
               this.cart.push(lesson.id);
               lesson.spaces--;
             }
           },
           removeItem(lesson) {
             if (this.cartLessonCount(lesson.id) > 0) {
+              this.orderError = "";
               this.cart.splice(this.cart.indexOf(lesson.id), 1);
               lesson.spaces++;
             }
